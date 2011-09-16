@@ -25,6 +25,8 @@ public class ERXTestSuite {
     
     suite.addTestSuite(com.webobjects.eoaccess.ERXEntityTest.class);
 
+    suite.addTestSuite(com.webobjects.appserver.WORequestTest.class);
+
     suite.addTestSuite(er.extensions.eof.ERXECTest.class);
     suite.addTestSuite(er.extensions.eof.ERXEOAccessUtilitiesTest.class);
     suite.addTestSuite(er.extensions.eof.ERXEOControlUtilitiesTest.class);    
@@ -48,6 +50,7 @@ public class ERXTestSuite {
     suite.addTestSuite(er.memoryadaptor.ERMemoryAdaptorTest.class);
 
     suite.addTestSuite(er.extensions.appserver.ERXApplicationTest.class);
+    suite.addTestSuite(er.extensions.appserver.ERXRequestTest.class);
     
     suite.addTestSuite(er.directtoweb.ERD2WModelTest.class);
 
