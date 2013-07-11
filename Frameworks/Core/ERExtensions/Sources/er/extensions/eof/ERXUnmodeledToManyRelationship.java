@@ -9,14 +9,6 @@ import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSMutableArray;
 
-import er.extensions.eof.ERXEOAccessUtilities;
-import er.extensions.eof.ERXEOControlUtilities;
-import er.extensions.eof.ERXEnterpriseObject;
-import er.extensions.eof.ERXFetchSpecification;
-import er.extensions.eof.ERXKey;
-import er.extensions.eof.ERXQ;
-import er.extensions.eof.ERXS;
-
 /**
  * A class than is composited into an EO to provide common toMany functionality
  * for the case where the toMany cannot be modeled in EOF due to the unusually
@@ -252,6 +244,13 @@ public class ERXUnmodeledToManyRelationship<S extends ERXEnterpriseObject, D ext
 	public void removeFromObjectsRelationship(NSArray<D> objects) {
 		for (D object : objects) {
 			object.removeObjectFromBothSidesOfRelationshipWithKey(sourceObject, reverseRelationshipKey.toString());
+		}
+	}
+	
+	public void removeAllFromObjectsRelationship() {
+		NSArray<D> objects = objects().immutableClone();
+		for (D object : objects) {
+			removeFromObjectsRelationship(object);
 		}
 	}
 

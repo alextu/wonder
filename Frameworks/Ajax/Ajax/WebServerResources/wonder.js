@@ -239,7 +239,7 @@ var AjaxOptions = {
 
 var AjaxUpdateContainer = {
 	registerPeriodic: function(id, canStop, stopped, options) {
-		var url = $(id).getAttribute('updateUrl');
+		var url = $(id).getAttribute('data-updateUrl');
 		var updater;
 		if (!canStop) {
 			updater = new Ajax.PeriodicalUpdater(id, url, options);
@@ -316,7 +316,7 @@ var AjaxUpdateContainer = {
 		if (updateElement == null) {
 			alert('There is no element on this page with the id "' + id + '".');
 		}
-		var actionUrl = updateElement.getAttribute('updateUrl');
+		var actionUrl = updateElement.getAttribute('data-updateUrl');
 		if (options && options['_r']) {
 			actionUrl = actionUrl.addQueryParameters('_r='+ id);
 		}
@@ -342,7 +342,7 @@ var AjaxUpdateLink = {
 		if (updateElement == null) {
 			alert('There is no element on this page with the id "' + id + '".');
 		}
-		AjaxUpdateLink._update(id, updateElement.getAttribute('updateUrl'), options, elementID, queryParams);
+		AjaxUpdateLink._update(id, updateElement.getAttribute('data-updateUrl'), options, elementID, queryParams);
 	},
 	
 	_update: function(id, actionUrl, options, elementID, queryParams) {
@@ -709,7 +709,7 @@ AjaxPeriodicUpdater.prototype = {
 	},
 	
 	start: function() {
-		var actionUrl = $(this.id).getAttribute('updateUrl');
+		var actionUrl = $(this.id).getAttribute('data-updateUrl');
 		actionUrl = actionUrl.addQueryParameters('_u='+ id);
 		this.updater = new Ajax.PeriodicalUpdater(this.id, actionUrl, { evalScripts: true, frequency: 2.0 });
 	},
@@ -968,6 +968,8 @@ Form.Element.RadioButtonObserver = Class.create(Form.Element.EventObserver, {
 });
 
 var AjaxBusy = {
+	spinners: {},
+	
 	requestContainer: function(request) {
 		var updateContainer;
 		if (request && request.container && request.container.success) {
@@ -976,11 +978,19 @@ var AjaxBusy = {
 		return updateContainer;
 	},
 	
-	register: function(busyClass, busyAnimationElement, watchContainerID, onCreateCallback, onCompleteCallback) {
+	register: function(busyClass, busyAnimationElement, watchContainerID, onCreateCallback, onCompleteCallback, useSpinJS, spinOpts) {
 		Ajax.Responders.register({
 			onCreate: function(request, transport) {
 	     	var updateContainer = AjaxBusy.requestContainer(request);
 	     	if (!watchContainerID || (updateContainer && updateContainer.id == watchContainerID)) {
+	     		if (useSpinJS == true) {
+	     			var spinner = AjaxBusy.spinners[busyAnimationElement];
+	     			if (spinner == undefined) {
+	     				spinner = new Spinner(spinOpts);
+	     				AjaxBusy.spinners[busyAnimationElement] = spinner;
+	     			}
+	     			spinner.spin($(busyAnimationElement));
+	     		}
 			  	if (busyClass && updateContainer) {
 						Element.addClassName(updateContainer, busyClass);
 			   	}
@@ -1009,6 +1019,14 @@ var AjaxBusy = {
 			   	if (onCompleteCallback) {
 			   		onCompleteCallback(request, transport);
 			   	}
+			   	
+	     		if (useSpinJS == true) {
+	     			var spinner = AjaxBusy.spinners[busyAnimationElement];
+	     			if (spinner) {
+	     				AjaxBusy.spinners[busyAnimationElement] = undefined;
+	     				setTimeout(function() { spinner.stop(); }, 500);
+	     			}
+	     		}
 			  }
 			}
 	  });
@@ -1196,7 +1214,12 @@ var AjaxUploadClient = Class.create({
 		    	this.options.succeededFunction(this.id);
 			if (this.options.finishedFunction)
 				this.options.finishedFunction(this.id);
-			$('AFUClearButton' + this.id).show();
+			if (this.options.clearUploadProgressOnSuccess) {
+				$('AFUFileObject' + this.id).hide();
+				$('AFUSelectFileButtonWrapper' + this.id).show();
+			} else {
+				$('AFUClearButton' + this.id).show();
+			}
 			this.previousState = this.STATE.SUCCEEDED;
 			break;
 		case this.STATE.FINISHED:

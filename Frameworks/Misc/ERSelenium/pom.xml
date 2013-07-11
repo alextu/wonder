@@ -2,7 +2,7 @@
 	<parent>
 		<groupId>wonder.frameworks</groupId>
 		<artifactId>misc</artifactId>
-		<version>5.4-SNAPSHOT</version>
+		<version>6.1.1-SNAPSHOT</version>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>wonder.misc</groupId>
@@ -27,7 +27,7 @@
 			<artifactId>JavaXML</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.openqa.selenium.client-drivers</groupId>
+			<groupId>org.seleniumhq.selenium.client-drivers</groupId>
 			<artifactId>selenium-java-client-driver</artifactId>
 		</dependency>
 	</dependencies>

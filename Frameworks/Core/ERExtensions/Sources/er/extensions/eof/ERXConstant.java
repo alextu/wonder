@@ -21,7 +21,7 @@ import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSPropertyListSerialization;
 
 import er.extensions.foundation.ERXArrayUtilities;
-import er.extensions.jdbc.ERXJDBCAdaptor;
+import er.extensions.foundation.ERXStringUtilities;
 
 /**
  * General purpose constant class, useful when you want reference object that are not
@@ -30,8 +30,8 @@ import er.extensions.jdbc.ERXJDBCAdaptor;
  * (the google search term for "why does my app lock up").<br />
  * <br>
  * To use the Number constants, you need to add an entry <code>ERXConstantClassName=Test.Status</code> to the attribute's userInfo 
- * in question and your EO's class description needs to be a {@link er.extensions.eof.ERXEntityClassDescription}, also
- * you must enable the {@link er.extension.ERXJDBCAdaptor}.<br />
+ * in question and your EO's class description needs to be a {@link ERXEntityClassDescription}, also
+ * you must enable the {@link er.extensions.jdbc.ERXJDBCAdaptor}.<br />
  * <br>
  * The String and Byte based constants can be used with a custom class type:<pre><code>
  * 
@@ -217,6 +217,13 @@ public abstract class ERXConstant {
     
 	public static class NumberConstant extends Number implements Constant {
 		/**
+		 * Do I need to update serialVersionUID?
+		 * See section 5.6 <cite>Type Changes Affecting Serialization</cite> on page 51 of the 
+		 * <a href="http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf">Java Object Serialization Spec</a>
+		 */
+		private static final long serialVersionUID = 1L;
+
+		/**
 		 * Holds the value.
 		 */
 		private int _value;
@@ -253,6 +260,7 @@ public abstract class ERXConstant {
 		/**
 		 * Number interface implementation, returns the value.
 		 */
+		@Override
 		public final double doubleValue() {
 			return intValue();
 		}
@@ -260,6 +268,7 @@ public abstract class ERXConstant {
 		/**
 		 * Number interface implementation, returns the value.
 		 */
+		@Override
 		public final float floatValue() {
 			return intValue();
 		}
@@ -267,6 +276,7 @@ public abstract class ERXConstant {
 		/**
 		 * Number interface implementation, returns the value.
 		 */
+		@Override
 		public final int intValue() {
 			return _value;
 		}
@@ -274,6 +284,7 @@ public abstract class ERXConstant {
 		/**
 		 * Number interface implementation, returns the value.
 		 */
+		@Override
 		public final long longValue() {
 			return intValue();
 		}
@@ -281,6 +292,7 @@ public abstract class ERXConstant {
 		/**
 		 * Returns the value.
 		 */
+		@Override
 		public final int hashCode() {
 			return _value;
 		}
@@ -294,17 +306,19 @@ public abstract class ERXConstant {
 			return name() + " (" + intValue() +  ")";
 		}
 		
+		@Override
 		public String toString() {
 			return getClass().getName() + ": " + userPresentableDescription();
 		}
 
-		public Object value() {
+		public Number value() {
 			return integerForInt(intValue());
 		}
 		
 		/**
 		 * Overridden to compare by value.
 		 */
+		@Override
 		public final boolean equals(Object otherObject) {
 			if(otherObject == null) {
 				return false;
@@ -366,7 +380,7 @@ public abstract class ERXConstant {
 			return _sortOrder;
 		}
 		
-		public Object value() {
+		public String value() {
 			return _value;
 		}
 		
@@ -374,6 +388,7 @@ public abstract class ERXConstant {
 			return name() + " (" + value() +  ")";
 		}
 		
+		@Override
 		public String toString() {
 			return getClass().getName() + ": " + userPresentableDescription();
 		}
@@ -404,6 +419,10 @@ public abstract class ERXConstant {
 			this((NSData)NSPropertyListSerialization.propertyListFromString(value.toString()),name);
 		}
 		
+		public ByteConstant(byte value[], String name) {
+			this(new NSData(value),name);
+		}
+		
 		public ByteConstant(NSData value, String name) {
 			_value = value;
 			_name = name;
@@ -419,7 +438,7 @@ public abstract class ERXConstant {
 			return _sortOrder;
 		}
 		
-		public Object value() {
+		public NSData value() {
 			return _value;
 		}
 		
@@ -427,6 +446,7 @@ public abstract class ERXConstant {
 			return name();
 		}
 		
+		@Override
 		public String toString() {
 			return getClass().getName() + ": " + userPresentableDescription();
 		}
@@ -456,7 +476,7 @@ public abstract class ERXConstant {
     
     protected static Integer[] INTEGERS=new Integer[MAX_INT];
     static {
-        for (int i=0; i<MAX_INT; i++) INTEGERS[i]=new Integer(i);
+        for (int i=0; i<MAX_INT; i++) INTEGERS[i]=Integer.valueOf(i);
     }
 
     public static final Object EmptyObject = new Object();
@@ -464,11 +484,11 @@ public abstract class ERXConstant {
     public static final NSArray EmptyArray = NSArray.EmptyArray;
     public static final NSArray SingleNullValueArray = new NSArray(NSKeyValueCoding.NullValue);
     public static final NSDictionary EmptyDictionary = NSDictionary.EmptyDictionary;
-    public static final Integer MinusOneInteger = new Integer(-1);
+    public static final Integer MinusOneInteger = Integer.valueOf(-1);
     public static final Integer OneInteger = integerForInt(1);
-    public static final Integer ZeroInteger = integerForInt (0);
-    public static final Integer TwoInteger = integerForInt (2);
-    public static final Integer ThreeInteger = integerForInt (3);
+    public static final Integer ZeroInteger = integerForInt(0);
+    public static final Integer TwoInteger = integerForInt(2);
+    public static final Integer ThreeInteger = integerForInt(3);
     public static final BigDecimal ZeroBigDecimal = new BigDecimal(0.00);
     public static final BigDecimal OneBigDecimal = new BigDecimal(1.00); 
     public static final Class[] EmptyClassArray = new Class[0];
@@ -484,7 +504,7 @@ public abstract class ERXConstant {
      * @return potentially cache Integer for a given int
      */
     public static Integer integerForInt(int i) {
-        return (i>=0 && i<MAX_INT) ? INTEGERS[i] : new Integer(i);
+        return (i>=0 && i<MAX_INT) ? INTEGERS[i] : Integer.valueOf(i);
     }
 
     /**
@@ -492,8 +512,10 @@ public abstract class ERXConstant {
      * @throws NumberFormatException forwarded from the
      *		parseInt method off of Integer
      * @return potentially cache Integer for a given String
+     * 
+     * @deprecated use {@link ERXStringUtilities#integerWithString(String)}
      */
-    // MOVEME: ERXStringUtilities
+    @Deprecated
     public static Integer integerForString(String s) throws NumberFormatException {
         return integerForInt(Integer.parseInt(s));
     }

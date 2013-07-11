@@ -15,7 +15,6 @@ import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSForwardException;
 import com.webobjects.foundation.NSMutableArray;
 
-import er.extensions.ERXExtensions;
 import er.extensions.localization.ERXLocalizer;
 
 /**
@@ -43,10 +42,18 @@ public class ERXExceptionUtilities {
 	 * @author mschrag
 	 */
 	public static class HideStackTraceException extends NSForwardException {
+		/**
+		 * Do I need to update serialVersionUID?
+		 * See section 5.6 <cite>Type Changes Affecting Serialization</cite> on page 51 of the 
+		 * <a href="http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf">Java Object Serialization Spec</a>
+		 */
+		private static final long serialVersionUID = 1L;
+
 		public HideStackTraceException(Throwable cause) {
 			super(cause);
 		}
 
+		@Override
 		public void printStackTrace(PrintWriter s) {
 			s.println("[stack trace already printed]");
 		}
@@ -102,10 +109,13 @@ public class ERXExceptionUtilities {
 	 * @return the paragraph string
 	 */
 	public static String toParagraph(Throwable t, boolean removeHtmlTags) {
-		StringBuffer messageBuffer = new StringBuffer();
+		StringBuilder messageBuffer = new StringBuilder();
 		boolean foundInternalError = false;
 		Throwable throwable = t;
 		while (throwable != null) {
+			if (messageBuffer.length() > 0) {
+				messageBuffer.append(" ");
+			}
 			Throwable oldThrowable = ERXExceptionUtilities.getMeaningfulThrowable(throwable);
 			String message = throwable.getLocalizedMessage();
 			if (message == null) {
@@ -123,10 +133,7 @@ public class ERXExceptionUtilities {
 			message = message.trim();
 			messageBuffer.append(message);
 			if (!message.endsWith(".")) {
-				messageBuffer.append(". ");
-			}
-			else {
-				messageBuffer.append(" ");
+				messageBuffer.append(".");
 			}
 			throwable = ERXExceptionUtilities.getCause(oldThrowable);
 		}
@@ -240,7 +247,7 @@ public class ERXExceptionUtilities {
 					URL path = ERXFileUtilities.pathURLForResourceNamed(skipPatternsFile, framework, null);
 					if (path != null) {
 						try {
-							NSArray<String> skipPatternStrings = (NSArray<String>) ERXExtensions.readPropertyListFromFileInFramework(skipPatternsFile, framework, null);
+							NSArray<String> skipPatternStrings = (NSArray<String>) ERXFileUtilities.readPropertyListFromFileInFramework(skipPatternsFile, framework, (NSArray)null);
 							if (skipPatternStrings != null) {
 								for (String skipPatternString : skipPatternStrings) {
 									try {

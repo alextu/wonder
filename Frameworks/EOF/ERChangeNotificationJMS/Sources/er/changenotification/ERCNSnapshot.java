@@ -29,6 +29,12 @@ import com.webobjects.foundation.NSNotification;
  * populate the dictionaries with the snapshots of updated enterprise objects. 
  */
 public class ERCNSnapshot implements Serializable {
+	/**
+	 * Do I need to update serialVersionUID?
+	 * See section 5.6 <cite>Type Changes Affecting Serialization</cite> on page 51 of the 
+	 * <a href="http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf">Java Object Serialization Spec</a>
+	 */
+	private static final long serialVersionUID = 1L;
 
     public static final String INSERTED = "inserted";
     public static final String UPDATED = "updated";
@@ -89,7 +95,7 @@ public class ERCNSnapshot implements Serializable {
 
     public static boolean shouldApplyChangeFor(String operation) {
         ERCNConfiguration configuration = ERCNNotificationCoordinator.coordinator().configuration();
-        return configuration.changeTypesToSubscrive().containsObject(operation);
+        return configuration.changeTypesToSubscribe().containsObject(operation);
     }
 
     public static boolean shouldSynchronizeEntity(String entityName) {
@@ -162,6 +168,7 @@ public class ERCNSnapshot implements Serializable {
         return result.immutableClone();
     }
 
+    @Override
     public String toString() {
         if (_toString == null) {
             StringBuffer sbuf = new StringBuffer();

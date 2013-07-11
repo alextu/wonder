@@ -35,8 +35,8 @@ import com.webobjects.eocontrol.EOKeyGlobalID;
 import com.webobjects.eocontrol.EOSharedEditingContext;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSDictionary;
-import com.webobjects.foundation.NSMutableDictionary;
 import com.webobjects.foundation.NSMutableArray;
+import com.webobjects.foundation.NSMutableDictionary;
 import com.webobjects.foundation.NSMutableSet;
 import com.webobjects.foundation.NSNotificationCenter;
 
@@ -64,6 +64,13 @@ public class ERXDatabaseContextDelegate {
 	public static final String DatabaseContextFailedToFetchObject = "DatabaseContextFailedToFetchObject";
 	
     public static class ObjectNotAvailableException extends EOObjectNotAvailableException {
+    	/**
+    	 * Do I need to update serialVersionUID?
+    	 * See section 5.6 <cite>Type Changes Affecting Serialization</cite> on page 51 of the 
+    	 * <a href="http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf">Java Object Serialization Spec</a>
+    	 */
+    	private static final long serialVersionUID = 1L;
+
     	private EOGlobalID globalID;
     	
 		public ObjectNotAvailableException(String message) {
@@ -165,8 +172,9 @@ public class ERXDatabaseContextDelegate {
 	 * EOF. To see the exceptions trace, set the logger
 	 * er.transaction.adaptor.Exceptions to DEBUG.
 	 * 
-	 * @param databaseContext
-	 * @param throwable
+	 * @param databaseContext the current database context
+	 * @param throwable the original exception
+	 * @return <code>true</code> if the exception has been handled already
 	 */
 	public boolean databaseContextShouldHandleDatabaseException(EODatabaseContext databaseContext, Throwable throwable) {
 		if(!reportingError.canEnter(databaseContext)) return true;
@@ -176,7 +184,13 @@ public class ERXDatabaseContextDelegate {
 			} else if(exLog.isInfoEnabled()) {
 				exLog.info("Database Exception occured: " + throwable);
 			}
-			boolean handled = ERXSQLHelper.newSQLHelper(databaseContext).handleDatabaseException(databaseContext, throwable);
+			boolean handled = false;
+			try {
+				handled = ERXSQLHelper.newSQLHelper(databaseContext).handleDatabaseException(databaseContext, throwable);
+			} catch(RuntimeException e) {
+				databaseContext.rollbackChanges();
+				throw e;
+			}
 			if(!handled && throwable.getMessage() != null && throwable.getMessage().indexOf("_obtainOpenChannel") != -1) {
 				NSArray models = databaseContext.database().models();
 				for(Enumeration e = models.objectEnumerator(); e.hasMoreElements(); ) {
@@ -511,6 +525,7 @@ public class ERXDatabaseContextDelegate {
     }
     
     private class ReentranceProtector {
+    	public ReentranceProtector() {}
     	
     	private NSMutableArray<EODatabaseContext> _accessing = new NSMutableArray<EODatabaseContext>();
     	
@@ -545,7 +560,7 @@ public class ERXDatabaseContextDelegate {
     /**
      * Refreshes the fetch timestamp for the fetched objects.
      * @param eos
-     * @param ec
+     * @param timestamp
      */
 	private void freshenFetchTimestamps(NSArray eos, long timestamp) {
 		for(Object eo: eos) {
@@ -607,24 +622,33 @@ public class ERXDatabaseContextDelegate {
 						NSArray<EOEnterpriseObject> candidates = null;
 						NSArray currentObjects = (NSArray) ERXThreadStorage.valueForKey(THREAD_KEY);
 						boolean fromThreadStorage = false;
-						if(currentObjects != null && currentObjects.lastObject() instanceof AutoBatchFaultingEnterpriseObject) {
-							candidates = currentObjects;
-							fromThreadStorage = true;
-						} else {
+						if (currentObjects != null) {
+							NSMutableArray<EOEnterpriseObject> tmpList = new NSMutableArray<EOEnterpriseObject>();
+							for (Object tmpItem : currentObjects) {
+								if (tmpItem instanceof AutoBatchFaultingEnterpriseObject) {
+									tmpList.add((EOEnterpriseObject) tmpItem);
+								}
+							}
+							if (tmpList.count() > 0) {
+								candidates = tmpList;
+								fromThreadStorage = true;
+							}
+						}
+						if (candidates == null) {
 							candidates = ec.registeredObjects();
 						}
 						long timestamp = ((AutoBatchFaultingEnterpriseObject) source).batchFaultingTimeStamp();
 						NSMutableArray<EOEnterpriseObject> eos = new NSMutableArray<EOEnterpriseObject>();
 						NSMutableArray faults = new NSMutableArray();
-						for (Object o : candidates) {
-							if (o instanceof AutoBatchFaultingEnterpriseObject) {
-								AutoBatchFaultingEnterpriseObject eo = (AutoBatchFaultingEnterpriseObject) o;
-								if (eo.batchFaultingTimeStamp() == timestamp || fromThreadStorage) {
-									if (!EOFaultHandler.isFault(eo) && eo.classDescription() == source.classDescription()) {
-										Object fault = eo.storedValueForKey(key);
+						for (EOEnterpriseObject current : candidates) {
+							if (current instanceof AutoBatchFaultingEnterpriseObject) {
+								AutoBatchFaultingEnterpriseObject currentEO = (AutoBatchFaultingEnterpriseObject) current;
+								if (currentEO.batchFaultingTimeStamp() == timestamp || fromThreadStorage) {
+									if (!EOFaultHandler.isFault(currentEO) && currentEO.classDescription() == source.classDescription()) {
+										Object fault = currentEO.storedValueForKey(key);
 										if (EOFaultHandler.isFault(fault)) {
 											faults.addObject(fault);
-											eos.addObject(eo);
+											eos.addObject(currentEO);
 											if (eos.count() == autoBatchFetchSize()) {
 												break;
 											}
@@ -668,7 +692,7 @@ public class ERXDatabaseContextDelegate {
 	 * 
 	 * @param dbc
 	 *            database context
-	 * @param obj
+	 * @param eo
 	 *            to-one fault
 	 * @return true if it's still a fault.
 	 */
@@ -691,10 +715,19 @@ public class ERXDatabaseContextDelegate {
 						NSMutableSet faults = new NSMutableSet();
 						NSArray<EOEnterpriseObject> candidates = null;
 						NSArray currentObjects = (NSArray) ERXThreadStorage.valueForKey(THREAD_KEY);
-						if(currentObjects != null && currentObjects.lastObject() instanceof AutoBatchFaultingEnterpriseObject) {
-							candidates = currentObjects;
-							fromThreadStorage = true;
-						} else {
+						if (currentObjects != null) {
+							NSMutableArray<EOEnterpriseObject> tmpList = new NSMutableArray<EOEnterpriseObject>();
+							for (Object tmpItem : currentObjects) {
+								if (tmpItem instanceof AutoBatchFaultingEnterpriseObject) {
+									tmpList.add((EOEnterpriseObject) tmpItem);
+								}
+							}
+							if (tmpList.count() > 0) {
+								candidates = tmpList;
+								fromThreadStorage = true;
+							}
+						}
+						if (candidates == null) {
 							candidates = ec.registeredObjects();
 						}
 						for (EOEnterpriseObject current : candidates) {
